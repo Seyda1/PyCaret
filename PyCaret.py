@@ -14,7 +14,7 @@ class DataProcessor:
             logger.error("DataFrame is not loaded.")
             return
         logger.info(f"NULL values:\n {df.isna().sum()}")
-        df = DataProcessor.increase_feature()
+        df = DataProcessor._increase_feature(df)
         logger.info(f"new dataframe:\n {df}")
         return df
         
@@ -37,7 +37,8 @@ class ModelTrainer:
         if df is None:
             logger.error("Dataframe is not loaded")
             return None
-        best_model = setup(df, target='Temp', fh=fh, fold=5, session_id=123)
+        setup_ = setup(df, target='Temp', fh=fh, fold=5, session_id=123)
+        best_model = compare_models(errors="raise")
         logger.info(f"Best Model for PyCaret:\n {best_model} and fh: {fh}")
         return best_model
 
@@ -46,7 +47,7 @@ class DataLoader:
         """Initialize DataLoader instance and load dataset.
         """        
         self.destination = "daily-min-temperatures.csv"
-        self._load_dataset()
+        #self._load_dataset()
         self.df = self.read_dataset()
         self.best_model = None
         self.fh = fh
@@ -82,11 +83,6 @@ class DataLoader:
     def train_model(self):
         self.best_model = ModelTrainer.train_model(self.df, self.fh)
         
-    def PyCaret(self):
-        s = setup(self.df,target='Temp',fh=self.fh, fold=5,session_id = 123)
-        self.best_model = compare_models(errors="raise")
-        logger.info(f"Best Model for PyCaret:\n {self.best_model} and fh: {self.fh}")
-        
     def predictions(self):
         if self.best_model is None:
             logger.error("No model trained")
@@ -107,7 +103,7 @@ class DataLoader:
     
 if __name__ == '__main__':
     data = DataLoader(fh=30)
+    data.visualize_data()
     data.preprocess_dataset()
-    data.PyCaret()
-        
+    data.train_model()
     
