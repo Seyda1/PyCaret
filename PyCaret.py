@@ -8,11 +8,38 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 class DataProcessor:
-    pass
-    
+    @staticmethod
+    def preprocess_dataset(df):
+        if df is None:
+            logger.error("DataFrame is not loaded.")
+            return
+        logger.info(f"NULL values:\n {df.isna().sum()}")
+        df = DataProcessor.increase_feature()
+        logger.info(f"new dataframe:\n {df}")
+        return df
+        
+    @staticmethod
+    def _increase_feature(df):
+        df["Date"] = pd.to_datetime(df["Date"])
+        df['Month'] = [i.month for i in df['Date']]
+        df['Year'] = [i.year for i in df['Date']]
+        df['Day'] = [i.day for i in df['Date']]
+        df['Day_of_year'] = [i.dayofyear for i in df['Date']]
+        df['Temp'] = df['Temp'].reset_index(drop=True)
+        df['Series'] = np.arange(1,len(df)+1)
+        df.drop(['Date'], axis=1, inplace=True)
+        df = df[['Temp','Day','Month','Year','Day_of_year']]
+        return df
     
 class ModelTrainer:
-    pass
+    @staticmethod
+    def train_model(df, fh):
+        if df is None:
+            logger.error("Dataframe is not loaded")
+            return None
+        best_model = setup(df, target='Temp', fh=fh, fold=5, session_id=123)
+        logger.info(f"Best Model for PyCaret:\n {best_model} and fh: {fh}")
+        return best_model
 
 class DataLoader:
     def __init__(self, fh) -> None:
@@ -49,24 +76,11 @@ class DataLoader:
             logger.error("Error while loading dataframe")
             return None
         
-    def _increase_feature(self):
-        self.df["Date"] = pd.to_datetime(self.df["Date"])
-        self.df['Month'] = [i.month for i in self.df['Date']]
-        self.df['Year'] = [i.year for i in self.df['Date']]
-        self.df['Day'] = [i.day for i in self.df['Date']]
-        self.df['Day_of_year'] = [i.dayofyear for i in self.df['Date']]
-        self.df['Temp'] = self.df['Temp'].reset_index(drop=True)
-        self.df['Series'] = np.arange(1,len(self.df)+1)
-        self.df.drop(['Date'], axis=1, inplace=True)
-        self.df = self.df[['Temp','Day','Month','Year','Day_of_year']]
-        
     def preprocess_dataset(self):
-        if self.df is None:
-            logger.error("DataFrame is not loaded.")
-            return
-        logger.info(f"NULL values:\n {self.df.isna().sum()}")
-        self._increase_feature()
-        logger.info(f"new dataframe:\n {self.df}")
+        self.df = DataProcessor.preprocess_dataset(self.df)
+        
+    def train_model(self):
+        self.best_model = ModelTrainer.train_model(self.df, self.fh)
         
     def PyCaret(self):
         s = setup(self.df,target='Temp',fh=self.fh, fold=5,session_id = 123)
@@ -74,11 +88,17 @@ class DataLoader:
         logger.info(f"Best Model for PyCaret:\n {self.best_model} and fh: {self.fh}")
         
     def predictions(self):
+        if self.best_model is None:
+            logger.error("No model trained")
+            return
         final_best = finalize_model(self.best_model)
         y_predict = predict_model(self.best_model, fh = self.fh)
         logger.info(f"predictions: {y_predict}")
         
     def plot_model(self):
+        if self.best_model is None:
+            logger.error("No model trained.")
+            return
         plot_model(self.best_model, plot = 'forecast', data_kwargs = {'fh' : self.fh})
         plot_model(self.best_model, plot = 'diagnostics')
         
