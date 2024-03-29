@@ -46,7 +46,7 @@ class DataLoader:
         """Initialize DataLoader instance and load dataset.
         """        
         self.destination = "daily-min-temperatures.csv"
-        #self._load_dataset()
+        self._load_dataset()
         self.df = self.read_dataset()
         self.best_model = None
         self.fh = fh
